@@ -1,0 +1,113 @@
+services:
+  catalog-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: catalog
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  cart-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cart
+      POSTGRES_USER: cart
+      POSTGRES_PASSWORD: cart
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cart"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  orders-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  catalog-service:
+    build: ./catalog-service
+    environment:
+      CATALOG_DB_URL: jdbc:postgresql://catalog-db:5432/catalog
+      CATALOG_DB_USER: catalog
+      CATALOG_DB_PASSWORD: catalog
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  cart-service:
+    build: ./cart-service
+    environment:
+      CART_DB_URL: jdbc:postgresql://cart-db:5432/cart
+      CART_DB_USER: cart
+      CART_DB_PASSWORD: cart
+    depends_on:
+      cart-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q UP"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  orders-service:
+    build: ./orders-service
+    environment:
+      ORDERS_DB_URL: jdbc:postgresql://orders-db:5432/orders
+      ORDERS_DB_USER: orders
+      ORDERS_DB_PASSWORD: orders
+      CATALOG_BASE_URL: http://catalog-service:8081
+    depends_on:
+      orders-db:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep -q UP"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  gateway:
+    build: ./gateway
+    environment:
+      CATALOG_URI: http://catalog-service:8081
+      CART_URI: http://cart-service:8082
+      ORDERS_URI: http://orders-service:8083
+    depends_on:
+      catalog-service:
+        condition: service_healthy
+      cart-service:
+        condition: service_healthy
+      orders-service:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build: ./web
+    depends_on:
+      gateway:
+        condition: service_healthy
+    ports:
+      - "8088:80"

@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: catalog-service
+  datasource:
+    url: ${CATALOG_DB_URL:jdbc:postgresql://localhost:5432/catalog}
+    username: ${CATALOG_DB_USER:catalog}
+    password: ${CATALOG_DB_PASSWORD:catalog}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  port: ${CATALOG_PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
