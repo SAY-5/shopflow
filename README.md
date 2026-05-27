@@ -102,13 +102,42 @@ first, which catches a placement path change that drops throughput sharply.
 Numbers differ by machine, so the gate compares two runs on the same host
 rather than against a fixed figure.
 
+## Order placement saga
+
+Placing an order spans two services: the catalog service owns inventory, the
+orders service owns orders. There is no shared transaction across them, so the
+orders service runs a saga.
+
+For each line in the order:
+
+1. reserve the units in the catalog service, and
+2. record a compensating action (release those units) on a stack.
+
+After all lines are reserved, the order is written to the orders database in its
+own transaction. If any step fails (a reservation is rejected, the catalog
+service errors, or the database write fails), the saga runs the compensating
+actions in reverse order to release every reservation it already made, then
+reports the placement as failed. The result is that a failed placement leaves no
+units reserved and no order row behind.
+
+The compensation logic lives in `OrderService.placeOrder`. The database write is
+isolated in `OrderWriter` so it commits or rolls back on its own, separate from
+the inventory calls.
+
+`OrderSagaCompensationIT` proves this: it lets the first line reserve, injects a
+failure on the second line's reservation, and asserts that the first
+reservation is released back to zero and that no order was persisted.
+
 ## How this differs
 
 ShopFlow is the microservices decomposition in this set of projects: several
-Spring Boot services, a database per service, and a gateway in front. The angle
-is the cross service order path, which is built up over the versions below into
-an order placement saga with compensation and inter service resilience between
-the gateway and the services.
+Spring Boot services, a database per service, and a gateway in front. Compared
+with the single application projects alongside it (a single Django app, a single
+Spring service with Kafka, and a migration walk through), the distinct angle
+here is the cross service order placement saga with compensation, plus inter
+service resilience between the gateway and the services. The combination of
+database per service, a gateway, and a compensating saga is what this repo is
+about.
 
 ## Local Testcontainers notes
 
