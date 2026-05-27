@@ -12,3 +12,7 @@ coverage/
 
 playwright-report/
 test-results/
+
+bench/baseline.json
+bench/candidate.json
+bench/last-run.json

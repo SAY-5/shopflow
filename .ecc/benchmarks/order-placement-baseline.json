@@ -1,0 +1,8 @@
+{
+  "benchmark": "order-placement",
+  "samples": 2000,
+  "p50_ms": 2.925,
+  "p95_ms": 3.774,
+  "p99_ms": 5.727,
+  "throughput_ops_per_sec": 329.4
+}
