@@ -71,6 +71,16 @@ cd web && npm ci && npm run lint && npm run typecheck && npm test && npm run bui
 The Playwright suite in `e2e/` drives the storefront against a running Compose
 stack and walks the browse, add to cart, checkout path.
 
+### Cross service checks
+
+- The gateway tests assert that each prefix routes to the right service with the
+  path prefix stripped and the method and body preserved (MockWebServer stands
+  in for the downstreams).
+- Cart totals are covered by jqwik property tests: the subtotal always equals
+  the sum of line totals, is never negative, and the total quantity matches.
+- Order placement is checked to reject an order when the inventory reservation
+  fails, leaving no order persisted.
+
 ## How this differs
 
 ShopFlow is the microservices decomposition in this set of projects: several

@@ -65,6 +65,22 @@ class GatewayRoutingTest {
   }
 
   @Test
+  void cartPostIsForwardedWithMethodAndBodyPreserved() throws InterruptedException {
+    cart.enqueue(new MockResponse().setResponseCode(200).setBody("{}"));
+    client
+        .post()
+        .uri("/api/cart/carts/abc/items")
+        .bodyValue("{\"productId\":1,\"quantity\":2}")
+        .exchange()
+        .expectStatus()
+        .isOk();
+    RecordedRequest forwarded = cart.takeRequest();
+    assertThat(forwarded.getMethod()).isEqualTo("POST");
+    assertThat(forwarded.getPath()).isEqualTo("/carts/abc/items");
+    assertThat(forwarded.getBody().readUtf8()).contains("\"productId\":1");
+  }
+
+  @Test
   void unknownPathIsNotFound() {
     client.get().uri("/api/unknown/thing").exchange().expectStatus().isNotFound();
   }

@@ -31,7 +31,7 @@
         <spotless.version>2.43.0</spotless.version>
         <checkstyle.plugin.version>3.5.0</checkstyle.plugin.version>
         <jacoco.version>0.8.12</jacoco.version>
-        <coverage.line.min>0.55</coverage.line.min>
+        <coverage.line.min>0.70</coverage.line.min>
     </properties>
 
     <dependencyManagement>
