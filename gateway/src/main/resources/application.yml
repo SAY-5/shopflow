@@ -6,6 +6,9 @@ spring:
     name: gateway
   cloud:
     gateway:
+      httpclient:
+        connect-timeout: 1000
+        response-timeout: 3s
       routes:
         - id: catalog
           uri: ${CATALOG_URI:http://localhost:8081}
@@ -13,18 +16,65 @@ spring:
             - Path=/api/catalog/**
           filters:
             - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: catalogBreaker
+                fallbackUri: forward:/fallback/catalog
+                statusCodes: 500,502,503,504
+            - name: Retry
+              args:
+                retries: 2
+                methods: GET
+                series: SERVER_ERROR
         - id: cart
           uri: ${CART_URI:http://localhost:8082}
           predicates:
             - Path=/api/cart/**
           filters:
             - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: cartBreaker
+                fallbackUri: forward:/fallback/cart
         - id: orders
           uri: ${ORDERS_URI:http://localhost:8083}
           predicates:
             - Path=/api/orders/**
           filters:
             - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: ordersBreaker
+                fallbackUri: forward:/fallback/orders
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 8
+        minimum-number-of-calls: 4
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5s
+        permitted-number-of-calls-in-half-open-state: 2
+    instances:
+      catalogBreaker:
+        base-config: default
+      cartBreaker:
+        base-config: default
+      ordersBreaker:
+        base-config: default
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s
+    instances:
+      catalogBreaker:
+        base-config: default
+      cartBreaker:
+        base-config: default
+      ordersBreaker:
+        base-config: default
 
 management:
   endpoints:

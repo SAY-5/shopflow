@@ -128,6 +128,21 @@ the inventory calls.
 failure on the second line's reservation, and asserts that the first
 reservation is released back to zero and that no order was persisted.
 
+## Inter service resilience
+
+The gateway wraps each route in a Resilience4j circuit breaker with a response
+timeout, and retries idempotent GETs on server errors. Each route has a fallback
+that returns 503 with a short message. When a downstream service errors or is
+unreachable, the breaker opens after a few failures and the gateway answers from
+the fallback instead of forwarding every request to a service that cannot
+respond, so a single unhealthy service does not make the gateway hang.
+
+`CircuitBreakerTest` covers this: a failing catalog downstream trips the breaker
+and the gateway returns the fallback, an open breaker stops forwarding to the
+failing service, an unrelated healthy service keeps working, and a downstream
+that is completely down still returns the fallback well within the timeout
+rather than hanging.
+
 ## How this differs
 
 ShopFlow is the microservices decomposition in this set of projects: several
